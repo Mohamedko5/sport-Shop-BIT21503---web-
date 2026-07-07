@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'Login | Football Shop';
+$pageTitle = 'Login | Football Store';
 require_once 'config/database.php';
 require_once 'includes/header.php';
 require_once 'includes/navbar.php';

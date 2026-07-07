@@ -1,5 +1,5 @@
 <?php
-$pageTitle = 'Product Details | Football Shop';
+$pageTitle = 'Product Details | Football Store';
 require_once 'includes/header.php';
 require_once 'includes/navbar.php';
 ?>

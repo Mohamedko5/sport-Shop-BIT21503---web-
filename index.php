@@ -45,6 +45,11 @@ $bestSellers = $pdo->query(
             <a class="btn" href="products.php">Shop Football Gear</a>
             <a class="btn btn-outline" href="products.php?brand_id=1">Browse Nike Gear</a>
         </div>
+        <div class="hero-trust">
+            <span>150+ Products</span>
+            <span>7 Premium Brands</span>
+            <span>Live Stock Tracking</span>
+        </div>
     </div>
 </section>
 
@@ -62,7 +67,7 @@ $bestSellers = $pdo->query(
                     <span class="tag"><?php echo cleanInput($product['category']); ?></span>
                     <span class="type-badge local"><?php echo cleanInput($product['brand']); ?></span>
                     <h3><?php echo cleanInput($product['name']); ?></h3>
-                    <p class="sku-line">SKU: <?php echo cleanInput($product['sku']); ?> · Stock: <?php echo (int) $product['stock']; ?></p>
+                    <p class="sku-line">SKU: <?php echo cleanInput($product['sku']); ?> | Stock: <?php echo (int) $product['stock']; ?></p>
                     <p><?php echo cleanInput(substr($product['description'], 0, 80)); ?>...</p>
                     <div class="product-meta">
                         <strong>RM <?php echo number_format($product['price'], 2); ?></strong>
@@ -81,7 +86,7 @@ $bestSellers = $pdo->query(
         <?php foreach ($newArrivals as $product): ?>
             <div>
                 <h3><?php echo cleanInput($product['name']); ?></h3>
-                <p><?php echo cleanInput($product['brand']); ?> · RM <?php echo number_format($product['price'], 2); ?></p>
+                <p><?php echo cleanInput($product['brand']); ?> | RM <?php echo number_format($product['price'], 2); ?></p>
                 <a href="product-details.php?id=<?php echo (int) $product['id']; ?>">View product</a>
             </div>
         <?php endforeach; ?>
@@ -95,7 +100,7 @@ $bestSellers = $pdo->query(
         <?php foreach ($bestSellers as $product): ?>
             <div>
                 <h3><?php echo cleanInput($product['name']); ?></h3>
-                <p><?php echo cleanInput($product['brand']); ?> · RM <?php echo number_format($product['price'], 2); ?></p>
+                <p><?php echo cleanInput($product['brand']); ?> | RM <?php echo number_format($product['price'], 2); ?></p>
                 <a href="product-details.php?id=<?php echo (int) $product['id']; ?>">View product</a>
             </div>
         <?php endforeach; ?>
