@@ -81,10 +81,7 @@ INSERT INTO brands (id, name) VALUES
 (1, 'Nike'),
 (2, 'Adidas'),
 (3, 'Puma'),
-(4, 'New Balance'),
-(5, 'Mizuno'),
-(6, 'Umbro'),
-(7, 'Under Armour');
+(6, 'Umbro');
 
 DELIMITER //
 CREATE PROCEDURE seed_football_products()
@@ -93,24 +90,37 @@ BEGIN
     DECLARE cat_id INT;
     DECLARE brand_id_value INT;
     DECLARE brand_name VARCHAR(30);
+    DECLARE brand_code VARCHAR(3);
     DECLARE cat_name VARCHAR(80);
+    DECLARE cat_prefix VARCHAR(3);
+    DECLARE cat_folder VARCHAR(30);
     DECLARE base_name VARCHAR(80);
     DECLARE variant_name VARCHAR(80);
+    DECLARE product_sku VARCHAR(50);
     DECLARE image_url VARCHAR(700);
+    DECLARE image_number INT;
     DECLARE product_price DECIMAL(10,2);
     DECLARE product_stock INT;
 
     WHILE i <= 150 DO
         SET cat_id = ((i - 1) MOD 5) + 1;
-        SET brand_id_value = ((i - 1) MOD 7) + 1;
+        SET brand_id_value = CASE ((i - 1) MOD 4) + 1
+            WHEN 1 THEN 1
+            WHEN 2 THEN 2
+            WHEN 3 THEN 3
+            ELSE 6
+        END;
         SET brand_name = CASE brand_id_value
             WHEN 1 THEN 'Nike'
             WHEN 2 THEN 'Adidas'
             WHEN 3 THEN 'Puma'
-            WHEN 4 THEN 'New Balance'
-            WHEN 5 THEN 'Mizuno'
-            WHEN 6 THEN 'Umbro'
-            ELSE 'Under Armour'
+            ELSE 'Umbro'
+        END;
+        SET brand_code = CASE brand_id_value
+            WHEN 1 THEN 'NIK'
+            WHEN 2 THEN 'ADI'
+            WHEN 3 THEN 'PUM'
+            ELSE 'UMB'
         END;
         SET cat_name = CASE cat_id
             WHEN 1 THEN 'Football'
@@ -118,6 +128,20 @@ BEGIN
             WHEN 3 THEN 'Jerseys'
             WHEN 4 THEN 'Gym Equipment'
             ELSE 'Accessories'
+        END;
+        SET cat_prefix = CASE cat_id
+            WHEN 1 THEN 'FOO'
+            WHEN 2 THEN 'SHO'
+            WHEN 3 THEN 'JER'
+            WHEN 4 THEN 'GYM'
+            ELSE 'ACC'
+        END;
+        SET cat_folder = CASE cat_id
+            WHEN 1 THEN 'football'
+            WHEN 2 THEN 'shoes'
+            WHEN 3 THEN 'jerseys'
+            WHEN 4 THEN 'gym'
+            ELSE 'accessories'
         END;
         SET base_name = CASE cat_id
             WHEN 1 THEN 'Size 5 Match Football'
@@ -143,13 +167,9 @@ BEGIN
             WHEN 14 THEN 'Precision'
             ELSE 'Future'
         END;
-        SET image_url = CASE cat_id
-            WHEN 1 THEN 'https://images.unsplash.com/photo-1614632537190-23e4146777db?auto=format&fit=crop&w=900&q=80'
-            WHEN 2 THEN 'https://images.unsplash.com/photo-1511886929837-354d827aae26?auto=format&fit=crop&w=900&q=80'
-            WHEN 3 THEN 'https://images.unsplash.com/photo-1577212017184-80cc0da11082?auto=format&fit=crop&w=900&q=80'
-            WHEN 4 THEN 'https://images.unsplash.com/photo-1517649763962-0c623066013b?auto=format&fit=crop&w=900&q=80'
-            ELSE 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=900&q=80'
-        END;
+        SET image_number = FLOOR((i - 1) / 5) + 1;
+        SET product_sku = CONCAT(cat_prefix, '-', LPAD(image_number, 3, '0'), '-', brand_code);
+        SET image_url = CONCAT('assets/images/products/', cat_folder, '/', product_sku, '.jpg');
         SET product_price = CASE cat_id
             WHEN 1 THEN 49 + ((i MOD 8) * 12)
             WHEN 2 THEN 179 + ((i MOD 9) * 20)
@@ -166,7 +186,7 @@ BEGIN
             CONCAT(brand_name, ' ', variant_name, ' ', base_name, ' ', LPAD(i, 3, '0')),
             cat_id,
             brand_id_value,
-            CONCAT(UPPER(REPLACE(LEFT(brand_name, 3), ' ', '')), '-', LPAD(i, 5, '0')),
+            product_sku,
             product_price,
             CONCAT('Professional ', LOWER(cat_name), ' from ', brand_name, ' built for football players who need durable match-ready performance, reliable comfort, and a clean modern look.'),
             image_url,

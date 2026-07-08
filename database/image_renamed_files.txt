@@ -1,0 +1,29 @@
+jerseys/BAR.jpg -> jerseys/JER-001-PUM.jpg
+jerseys/BAR1.jpg -> jerseys/JER-002-NIK.jpg
+jerseys/RAL.jpg -> jerseys/JER-003-UMB.jpg
+jerseys/RAL1.jpg -> jerseys/JER-004-NIK.jpg
+jerseys/ARS.jpg -> jerseys/JER-005-ADI.jpg
+jerseys/ARS!.jpg -> jerseys/JER-006-PUM.jpg
+jerseys/PSG.jpg -> jerseys/JER-007-ADI.jpg
+jerseys/PSG1.jpg -> jerseys/JER-008-PUM.jpg
+gym/images.jpg -> gym/GYM-001-NIK.jpg
+gym/images (1).jpg -> gym/GYM-002-ADI.jpg
+gym/images (2).jpg -> gym/GYM-003-PUM.jpg
+gym/images (3).jpg -> gym/GYM-004-ADI.jpg
+gym/images (4).jpg -> gym/GYM-005-PUM.jpg
+gym/images (5).jpg -> gym/GYM-006-NIK.jpg
+shoes/images.jpg -> shoes/SHO-001-ADI.jpg
+shoes/images (1).jpg -> shoes/SHO-002-PUM.jpg
+shoes/images (2).jpg -> shoes/SHO-003-ADI.jpg
+shoes/images (3).jpg -> shoes/SHO-004-PUM.jpg
+shoes/images (4).jpg -> shoes/SHO-005-NIK.jpg
+shoes/images (5).jpg -> shoes/SHO-006-UMB.jpg
+shoes/images----.jpg -> shoes/SHO-007-NIK.jpg
+shoes/images (1)----.jpg -> shoes/SHO-008-ADI.jpg
+shoes/images (2)-----.jpg -> shoes/SHO-009-PUM.jpg
+accessories/images.jpg -> accessories/ACC-001-ADI.jpg
+accessories/images (1).jpg -> accessories/ACC-002-PUM.jpg
+accessories/images (2).jpg -> accessories/ACC-003-NIK.jpg
+accessories/images (3).jpg -> accessories/ACC-004-UMB.jpg
+accessories/images (4).jpg -> accessories/ACC-005-NIK.jpg
+accessories/images (5).jpg -> accessories/ACC-006-ADI.jpg

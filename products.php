@@ -4,7 +4,7 @@ require_once 'includes/header.php';
 require_once 'includes/navbar.php';
 ?>
 
-<main class="container page">
+<main class="container page" data-products-page="true" data-user-role="<?php echo cleanInput($_SESSION['role'] ?? 'guest'); ?>">
     <section class="section-heading">
         <h1>Shop Football Gear</h1>
         <p>Browse boots, jerseys, balls, goalkeeper gear, training equipment, bags, socks, and club merchandise.</p>

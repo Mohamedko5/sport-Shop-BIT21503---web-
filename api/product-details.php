@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once '../config/database.php';
+require_once '../includes/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
@@ -32,6 +33,14 @@ if (!$product) {
     echo json_encode(['error' => 'Product not found.']);
     exit;
 }
+
+if (!productHasPublicImage($product['image'])) {
+    http_response_code(409);
+    echo json_encode(['error' => 'This product is currently unavailable because the image is missing.']);
+    exit;
+}
+
+$product['image'] = productImage($product['image']);
 
 echo json_encode($product);
 ?>

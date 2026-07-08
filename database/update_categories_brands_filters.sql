@@ -10,10 +10,7 @@ INSERT INTO brands (id, name) VALUES
 (1, 'Nike'),
 (2, 'Adidas'),
 (3, 'Puma'),
-(4, 'New Balance'),
-(5, 'Mizuno'),
-(6, 'Umbro'),
-(7, 'Under Armour')
+(6, 'Umbro')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 INSERT INTO categories (id, name) VALUES
@@ -43,13 +40,19 @@ SET brand_id = CASE
     WHEN brand = 'Nike' THEN 1
     WHEN brand = 'Adidas' THEN 2
     WHEN brand = 'Puma' THEN 3
-    WHEN brand = 'New Balance' THEN 4
-    WHEN brand = 'Mizuno' THEN 5
     WHEN brand = 'Umbro' THEN 6
-    WHEN brand = 'Under Armour' THEN 7
+    WHEN brand = 'New Balance' THEN 1
+    WHEN brand = 'Mizuno' THEN 2
+    WHEN brand = 'Under Armour' THEN 3
     ELSE 1
 END
 WHERE brand_id IS NULL;
 
 ALTER TABLE products
 MODIFY brand_id INT NOT NULL;
+
+UPDATE products SET brand_id = 1 WHERE brand_id = 4;
+UPDATE products SET brand_id = 2 WHERE brand_id = 5;
+UPDATE products SET brand_id = 3 WHERE brand_id = 7;
+
+DELETE FROM brands WHERE id NOT IN (1, 2, 3, 6);

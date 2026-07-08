@@ -3,38 +3,64 @@ $pageTitle = 'Manage Categories | Football Store';
 require_once 'config/database.php';
 require_once 'includes/auth.php';
 requireAdmin();
-require_once 'includes/header.php';
-require_once 'includes/navbar.php';
 
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verifyCsrfToken();
+    $action = $_POST['action'] ?? 'add';
     $name = trim($_POST['name'] ?? '');
 
-    if ($name === '') {
-        $errors[] = 'Category name is required.';
+    if ($action === 'add') {
+        if ($name === '') {
+            $errors[] = 'Category name is required.';
+        }
+
+        if (empty($errors)) {
+            $stmt = $pdo->prepare('INSERT INTO categories (name) VALUES (?)');
+            $stmt->execute([$name]);
+            header('Location: manage-categories.php');
+            exit;
+        }
     }
 
-    if (empty($errors)) {
-        $stmt = $pdo->prepare('INSERT INTO categories (name) VALUES (?)');
-        $stmt->execute([$name]);
+    if ($action === 'edit') {
+        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+        if (!$id || $name === '') {
+            $errors[] = 'Valid category and name are required.';
+        }
+
+        if (empty($errors)) {
+            $stmt = $pdo->prepare('UPDATE categories SET name = ? WHERE id = ?');
+            $stmt->execute([$name, $id]);
+            header('Location: manage-categories.php');
+            exit;
+        }
+    }
+
+    if ($action === 'delete') {
+        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+        if ($id) {
+            $check = $pdo->prepare('SELECT COUNT(*) FROM products WHERE category_id = ?');
+            $check->execute([$id]);
+            if ((int) $check->fetchColumn() === 0) {
+                $delete = $pdo->prepare('DELETE FROM categories WHERE id = ?');
+                $delete->execute([$id]);
+            } else {
+                $_SESSION['category_error'] = 'Category cannot be deleted while products are assigned to it.';
+            }
+        }
         header('Location: manage-categories.php');
         exit;
     }
 }
 
-if (isset($_GET['delete'])) {
-    $id = filter_input(INPUT_GET, 'delete', FILTER_VALIDATE_INT);
-    if ($id) {
-        $check = $pdo->prepare('SELECT COUNT(*) FROM products WHERE category_id = ?');
-        $check->execute([$id]);
-        if ((int) $check->fetchColumn() === 0) {
-            $delete = $pdo->prepare('DELETE FROM categories WHERE id = ?');
-            $delete->execute([$id]);
-        }
-    }
-    header('Location: manage-categories.php');
-    exit;
+$editId = filter_input(INPUT_GET, 'edit', FILTER_VALIDATE_INT);
+$editCategory = null;
+if ($editId) {
+    $stmt = $pdo->prepare('SELECT * FROM categories WHERE id = ?');
+    $stmt->execute([$editId]);
+    $editCategory = $stmt->fetch();
 }
 
 $categories = $pdo->query(
@@ -44,22 +70,38 @@ $categories = $pdo->query(
      GROUP BY categories.id
      ORDER BY categories.id'
 )->fetchAll();
+
+require_once 'includes/header.php';
+require_once 'includes/navbar.php';
 ?>
 
 <main class="container page">
     <section class="section-heading">
         <h1>Manage Categories</h1>
-        <p>Organize the Football Store catalogue by product category.</p>
+        <p>Organize the catalogue by product category.</p>
     </section>
 
+    <?php if (!empty($_SESSION['category_error'])): ?>
+        <div class="alert error"><?php echo cleanInput($_SESSION['category_error']); unset($_SESSION['category_error']); ?></div>
+    <?php endif; ?>
+
     <form class="form-card wide" method="POST">
-        <h2>Add Category</h2>
+        <?php echo csrfField(); ?>
+        <input type="hidden" name="action" value="<?php echo $editCategory ? 'edit' : 'add'; ?>">
+        <?php if ($editCategory): ?>
+            <input type="hidden" name="id" value="<?php echo (int) $editCategory['id']; ?>">
+        <?php endif; ?>
+
+        <h2><?php echo $editCategory ? 'Edit Category' : 'Add Category'; ?></h2>
         <?php foreach ($errors as $error): ?>
             <div class="alert error"><?php echo cleanInput($error); ?></div>
         <?php endforeach; ?>
         <label>Name</label>
-        <input type="text" name="name" required>
-        <button class="btn" type="submit">Add Category</button>
+        <input type="text" name="name" value="<?php echo $editCategory ? cleanInput($editCategory['name']) : ''; ?>" required>
+        <button class="btn" type="submit"><?php echo $editCategory ? 'Update Category' : 'Add Category'; ?></button>
+        <?php if ($editCategory): ?>
+            <a class="btn btn-outline" href="manage-categories.php">Cancel</a>
+        <?php endif; ?>
     </form>
 
     <section class="table-section">
@@ -70,7 +112,7 @@ $categories = $pdo->query(
                     <tr>
                         <th>Name</th>
                         <th>Products</th>
-                        <th>Action</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -79,11 +121,19 @@ $categories = $pdo->query(
                             <td><?php echo cleanInput($category['name']); ?></td>
                             <td><?php echo (int) $category['product_count']; ?></td>
                             <td>
-                                <?php if ((int) $category['product_count'] === 0): ?>
-                                    <a class="danger" href="manage-categories.php?delete=<?php echo (int) $category['id']; ?>" onclick="return confirm('Delete this category?')">Delete</a>
-                                <?php else: ?>
-                                    In use
-                                <?php endif; ?>
+                                <div class="inline-form">
+                                    <a href="manage-categories.php?edit=<?php echo (int) $category['id']; ?>">Edit</a>
+                                    <?php if ((int) $category['product_count'] === 0): ?>
+                                        <form method="POST" onsubmit="return confirm('Delete this category?')">
+                                            <?php echo csrfField(); ?>
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="<?php echo (int) $category['id']; ?>">
+                                            <button class="link-danger" type="submit">Delete</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <span>In use</span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -3,8 +3,6 @@ $pageTitle = 'Edit Product | Football Store';
 require_once 'config/database.php';
 require_once 'includes/auth.php';
 requireAdmin();
-require_once 'includes/header.php';
-require_once 'includes/navbar.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$id) {
@@ -26,6 +24,7 @@ $categories = $pdo->query('SELECT id, name FROM categories ORDER BY id')->fetchA
 $brands = $pdo->query('SELECT id, name FROM brands ORDER BY id')->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verifyCsrfToken();
     $name = trim($_POST['name'] ?? '');
     $categoryId = filter_input(INPUT_POST, 'category_id', FILTER_VALIDATE_INT);
     $sku = strtoupper(trim($_POST['sku'] ?? ''));
@@ -50,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$brandId) {
         $errors[] = 'Please select a brand.';
     }
-    if (!filter_var($image, FILTER_VALIDATE_URL)) {
-        $errors[] = 'Image must be a valid URL.';
+    if (!isValidImageReference($image)) {
+        $errors[] = 'Image must be a valid URL or an assets/images/products/ path.';
     }
     if ($stock === false || $stock < 0) {
         $errors[] = 'Stock must be zero or more.';
@@ -68,10 +67,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 }
+
+require_once 'includes/header.php';
+require_once 'includes/navbar.php';
 ?>
 
 <main class="container page narrow">
     <form class="form-card wide" method="POST">
+        <?php echo csrfField(); ?>
         <h1>Edit Product</h1>
         <?php foreach ($errors as $error): ?>
             <div class="alert error"><?php echo cleanInput($error); ?></div>
@@ -108,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>Description</label>
         <textarea name="description" rows="5" required><?php echo cleanInput($product['description']); ?></textarea>
 
-        <label>Image URL</label>
+        <label>Image URL or Local Path</label>
         <input type="text" name="image" value="<?php echo cleanInput($product['image']); ?>" required>
 
         <label>Stock</label>

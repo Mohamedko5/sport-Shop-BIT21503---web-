@@ -1,10 +1,11 @@
 <?php
 $pageTitle = 'Register | Football Store';
 require_once 'config/database.php';
-require_once 'includes/header.php';
-require_once 'includes/navbar.php';
+require_once 'includes/auth.php';
 
 $errors = [];
+$name = '';
+$email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
@@ -40,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+require_once 'includes/header.php';
+require_once 'includes/navbar.php';
 ?>
 
 <main class="container auth-page">
@@ -50,10 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endforeach; ?>
 
         <label>Name</label>
-        <input type="text" name="name" required>
+        <input type="text" name="name" value="<?php echo cleanInput($name); ?>" required>
 
         <label>Email</label>
-        <input type="email" name="email" required>
+        <input type="email" name="email" value="<?php echo cleanInput($email); ?>" required>
 
         <label>Password</label>
         <input type="password" name="password" required>

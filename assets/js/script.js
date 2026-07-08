@@ -38,6 +38,15 @@ function showApiMessage(message, isError = false) {
     messageBox.style.display = message ? 'block' : 'none';
 }
 
+function productImage(image) {
+    const value = String(image || '').trim();
+    return value === '' ? 'assets/images/products/default-product.jpg' : value;
+}
+
+function imageFallbackAttribute() {
+    return 'onerror="this.onerror=null;const card=this.closest(\'.product-card\');if(card){card.remove();}else{const details=this.closest(\'#productDetails\');if(details){details.innerHTML=\'<div class=&quot;content-panel&quot;><p>This product is currently unavailable because the image is missing.</p><a class=&quot;btn&quot; href=&quot;products.php&quot;>Back to shop</a></div>\';}else{this.style.display=\'none\';}}"';
+}
+
 async function fetchJson(url, options = {}) {
     const response = await fetch(url, options);
     const data = await response.json();
@@ -101,7 +110,7 @@ function renderProducts(products) {
 
     grid.innerHTML = products.map((product) => `
         <article class="product-card">
-            <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
+            <img src="${escapeHtml(productImage(product.image))}" alt="${escapeHtml(product.name)}" ${imageFallbackAttribute()}>
             <div class="product-body">
                 <span class="tag">${escapeHtml(product.category)}</span>
                 <span class="type-badge local">${escapeHtml(product.brand)}</span>
@@ -110,11 +119,12 @@ function renderProducts(products) {
                 <p>${escapeHtml(product.description.substring(0, 90))}...</p>
                 <div class="product-meta">
                     <strong>${money.format(product.price)}</strong>
-                    <a href="product-details.php?id=${product.id}">Details</a>
                 </div>
+                ${productCardActions(product)}
             </div>
         </article>
     `).join('');
+    bindPayButtons(grid);
 }
 
 function renderProductCardsInto(grid, products) {
@@ -129,7 +139,7 @@ function renderProductCardsInto(grid, products) {
 
     grid.innerHTML = products.map((product) => `
         <article class="product-card">
-            <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
+            <img src="${escapeHtml(productImage(product.image))}" alt="${escapeHtml(product.name)}" ${imageFallbackAttribute()}>
             <div class="product-body">
                 <span class="tag">${escapeHtml(product.category)}</span>
                 <span class="type-badge local">${escapeHtml(product.brand)}</span>
@@ -137,11 +147,12 @@ function renderProductCardsInto(grid, products) {
                 <p class="sku-line">SKU: ${escapeHtml(product.sku)} | Stock: ${product.stock}</p>
                 <div class="product-meta">
                     <strong>${money.format(product.price)}</strong>
-                    <a href="product-details.php?id=${product.id}">Details</a>
                 </div>
+                ${productCardActions(product)}
             </div>
         </article>
     `).join('');
+    bindPayButtons(grid);
 }
 
 function getProductFilters() {
@@ -217,6 +228,11 @@ function getProductIdFromUrl() {
     return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function currentUserRole() {
+    const page = document.querySelector('[data-product-details-page], [data-products-page]');
+    return page ? page.dataset.userRole || 'guest' : 'guest';
+}
+
 async function addProductToCart(productId, quantity) {
     const formData = new FormData();
     formData.append('action', 'add');
@@ -229,14 +245,128 @@ async function addProductToCart(productId, quantity) {
     });
 }
 
+async function clearCart() {
+    const formData = new FormData();
+    formData.append('action', 'clear');
+
+    return fetchJson('api/cart.php', {
+        method: 'POST',
+        body: formData,
+    });
+}
+
+async function startDirectCheckout(productId, quantity = 1) {
+    await clearCart();
+    await addProductToCart(productId, quantity);
+    window.location.href = 'checkout.php';
+}
+
+function loginRedirectUrl() {
+    const currentPage = `${window.location.pathname.split('/').pop()}${window.location.search}`;
+    return `login.php?redirect=${encodeURIComponent(currentPage)}`;
+}
+
+async function payForProduct(productId) {
+    const role = currentUserRole();
+
+    if (role === 'guest') {
+        window.location.href = 'login.php?redirect=products.php';
+        return;
+    }
+
+    if (role === 'admin') {
+        showApiMessage('Admin cannot place orders.', true);
+        return;
+    }
+
+    showApiMessage('Preparing checkout...');
+    try {
+        await startDirectCheckout(productId, 1);
+    } catch (error) {
+        showApiMessage(error.message, true);
+    }
+}
+
+function productCardActions(product) {
+    const role = currentUserRole();
+
+    if (role === 'admin') {
+        return `
+            <div class="product-actions single-action">
+                <a class="btn btn-outline" href="product-details.php?id=${product.id}">Details</a>
+            </div>
+        `;
+    }
+
+    if (role === 'user') {
+        return `
+            <div class="product-actions">
+                <a class="btn btn-outline" href="product-details.php?id=${product.id}">Add Cart</a>
+                <button class="btn product-pay-btn" type="button" data-pay-product="${product.id}">Pay</button>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="product-actions">
+            <a class="btn btn-outline" href="product-details.php?id=${product.id}">Details</a>
+            <a class="btn product-pay-btn" href="login.php?redirect=${encodeURIComponent(`product-details.php?id=${product.id}`)}">Login to Buy</a>
+        </div>
+    `;
+}
+
+function bindPayButtons(root = document) {
+    root.querySelectorAll('[data-pay-product]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const productId = Number.parseInt(button.dataset.payProduct, 10);
+            if (Number.isInteger(productId) && productId > 0) {
+                payForProduct(productId);
+            }
+        });
+    });
+}
+
 function renderProductDetails(product) {
     const details = document.getElementById('productDetails');
     if (!details) {
         return;
     }
 
+    const role = currentUserRole();
+    let actionHtml = `
+        <div class="cart-form">
+            <a class="btn" href="${loginRedirectUrl()}">Add to Cart</a>
+            <a class="btn btn-dark" href="${loginRedirectUrl()}">Pay Now</a>
+            <p class="form-note">Login as a customer to continue shopping.</p>
+        </div>
+    `;
+
+    if (role === 'user') {
+        actionHtml = `
+            <form class="cart-form" id="apiCartForm">
+                <input type="number" name="quantity" min="1" max="${product.stock}" value="1" required>
+                <button class="btn" type="submit">Add to Cart</button>
+                <button class="btn btn-dark" type="submit" name="buy_now" value="1">Pay Now</button>
+            </form>
+            <div id="cartActionLinks" class="cart-action-links" hidden>
+                <a class="btn btn-outline" href="products.php">Continue Shopping</a>
+                <a class="btn" href="cart.php">Go to Cart</a>
+            </div>
+        `;
+    }
+
+    if (role === 'admin') {
+        actionHtml = `
+            <div class="alert error">Admin cannot place orders.</div>
+            <div class="dashboard-actions">
+                <a class="btn" href="edit-product.php?id=${product.id}">Edit Product</a>
+                <a class="btn btn-outline" href="dashboard.php">Dashboard</a>
+            </div>
+        `;
+    }
+
     details.innerHTML = `
-        <img class="details-image" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}">
+        <img class="details-image" src="${escapeHtml(productImage(product.image))}" alt="${escapeHtml(product.name)}" ${imageFallbackAttribute()}>
         <div class="details-content">
             <span class="tag">${escapeHtml(product.category)}</span>
             <span class="type-badge local">${escapeHtml(product.brand)}</span>
@@ -245,10 +375,7 @@ function renderProductDetails(product) {
             <p>${escapeHtml(product.description)}</p>
             <h2>${money.format(product.price)}</h2>
             <p><strong>Stock:</strong> ${product.stock}</p>
-            <form class="cart-form" id="apiCartForm">
-                <input type="number" name="quantity" min="1" max="${product.stock}" value="1" required>
-                <button class="btn" type="submit">Add to Cart</button>
-            </form>
+            ${actionHtml}
         </div>
     `;
 
@@ -260,11 +387,21 @@ function renderProductDetails(product) {
     cartForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const quantity = Number.parseInt(event.target.quantity.value, 10);
-        showApiMessage('Adding product to cart...');
+        const isBuyNow = event.submitter && event.submitter.name === 'buy_now';
+        showApiMessage(isBuyNow ? 'Preparing checkout...' : 'Adding product to cart...');
 
         try {
+            if (isBuyNow) {
+                await startDirectCheckout(product.id, quantity);
+                return;
+            }
+
             const result = await addProductToCart(product.id, quantity);
-            showApiMessage(result.message);
+            showApiMessage(`${result.message} You can continue shopping or go to your cart.`);
+            const actionLinks = document.getElementById('cartActionLinks');
+            if (actionLinks) {
+                actionLinks.hidden = false;
+            }
         } catch (error) {
             showApiMessage(error.message, true);
         }
@@ -300,5 +437,55 @@ async function loadProductDetails() {
     }
 }
 
+function setupPaymentFields() {
+    const cardFields = document.getElementById('cardDemoFields');
+    const paymentInputs = document.querySelectorAll('input[name="payment_method"]');
+
+    if (!cardFields || paymentInputs.length === 0) {
+        return;
+    }
+
+    const updateCardFields = () => {
+        const selected = document.querySelector('input[name="payment_method"]:checked');
+        const needsCard = selected && ['Visa Card', 'MasterCard'].includes(selected.value);
+        cardFields.classList.toggle('active', Boolean(needsCard));
+        cardFields.querySelectorAll('input').forEach((input) => {
+            input.required = Boolean(needsCard);
+            if (!needsCard) {
+                input.value = '';
+            }
+        });
+    };
+
+    paymentInputs.forEach((input) => {
+        input.addEventListener('change', updateCardFields);
+    });
+    updateCardFields();
+}
+
+function setupRegisterRoleField() {
+    const roleSelect = document.getElementById('registerRole');
+    const adminCodeGroup = document.getElementById('adminCodeGroup');
+    const adminCodeInput = document.getElementById('adminCodeInput');
+
+    if (!roleSelect || !adminCodeGroup || !adminCodeInput) {
+        return;
+    }
+
+    const updateAdminCode = () => {
+        const isAdmin = roleSelect.value === 'admin';
+        adminCodeGroup.hidden = !isAdmin;
+        adminCodeInput.required = isAdmin;
+        if (!isAdmin) {
+            adminCodeInput.value = '';
+        }
+    };
+
+    roleSelect.addEventListener('change', updateAdminCode);
+    updateAdminCode();
+}
+
 setupProductsPage();
 loadProductDetails();
+setupPaymentFields();
+setupRegisterRoleField();

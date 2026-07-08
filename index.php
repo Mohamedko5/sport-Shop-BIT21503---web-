@@ -11,9 +11,11 @@ $stmt = $pdo->query(
      JOIN brands ON products.brand_id = brands.id
      WHERE products.is_featured = 1
      ORDER BY products.created_at DESC
-     LIMIT 6'
+     LIMIT 40'
 );
-$featuredProducts = $stmt->fetchAll();
+$featuredProducts = array_slice(array_values(array_filter($stmt->fetchAll(), function ($product) {
+    return productHasPublicImage($product['image']);
+})), 0, 6);
 
 $newArrivals = $pdo->query(
     'SELECT products.*, categories.name AS category, brands.name AS brand
@@ -22,8 +24,11 @@ $newArrivals = $pdo->query(
      JOIN brands ON products.brand_id = brands.id
      WHERE products.is_new_arrival = 1
      ORDER BY products.created_at DESC
-     LIMIT 3'
+     LIMIT 40'
 )->fetchAll();
+$newArrivals = array_slice(array_values(array_filter($newArrivals, function ($product) {
+    return productHasPublicImage($product['image']);
+})), 0, 3);
 
 $bestSellers = $pdo->query(
     'SELECT products.*, categories.name AS category, brands.name AS brand
@@ -32,8 +37,11 @@ $bestSellers = $pdo->query(
      JOIN brands ON products.brand_id = brands.id
      WHERE products.is_best_seller = 1
      ORDER BY products.created_at DESC
-     LIMIT 3'
+     LIMIT 40'
 )->fetchAll();
+$bestSellers = array_slice(array_values(array_filter($bestSellers, function ($product) {
+    return productHasPublicImage($product['image']);
+})), 0, 3);
 ?>
 
 <section class="hero">
@@ -53,7 +61,7 @@ $bestSellers = $pdo->query(
     </div>
 </section>
 
-<main class="container">
+<main class="container" data-products-page="true" data-user-role="<?php echo cleanInput($_SESSION['role'] ?? 'guest'); ?>">
     <section class="section-heading">
         <h2>Featured Football Products</h2>
         <p>Top football products selected from our local inventory.</p>
@@ -62,7 +70,7 @@ $bestSellers = $pdo->query(
     <div class="product-grid">
         <?php foreach ($featuredProducts as $product): ?>
             <article class="product-card">
-                <img src="<?php echo cleanInput($product['image']); ?>" alt="<?php echo cleanInput($product['name']); ?>">
+                <img src="<?php echo cleanInput(productImage($product['image'])); ?>" alt="<?php echo cleanInput($product['name']); ?>" onerror="this.onerror=null;this.closest('.product-card').remove();">
                 <div class="product-body">
                     <span class="tag"><?php echo cleanInput($product['category']); ?></span>
                     <span class="type-badge local"><?php echo cleanInput($product['brand']); ?></span>
@@ -71,8 +79,8 @@ $bestSellers = $pdo->query(
                     <p><?php echo cleanInput(substr($product['description'], 0, 80)); ?>...</p>
                     <div class="product-meta">
                         <strong>RM <?php echo number_format($product['price'], 2); ?></strong>
-                        <a href="product-details.php?id=<?php echo $product['id']; ?>">Details</a>
                     </div>
+                    <?php echo productCardActions($product['id']); ?>
                 </div>
             </article>
         <?php endforeach; ?>

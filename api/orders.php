@@ -15,6 +15,12 @@ if (!isLoggedIn()) {
     exit;
 }
 
+if (!isCustomer()) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Admins cannot place customer orders.']);
+    exit;
+}
+
 $rawInput = file_get_contents('php://input');
 $payload = json_decode($rawInput, true);
 
@@ -55,8 +61,8 @@ foreach ($payload['items'] as $item) {
 $pdo->beginTransaction();
 
 try {
-    $order = $pdo->prepare('INSERT INTO orders (user_id, total_price, status) VALUES (?, ?, ?)');
-    $order->execute([$_SESSION['user_id'], $total, 'Pending']);
+    $order = $pdo->prepare('INSERT INTO orders (user_id, total_price, status, order_status) VALUES (?, ?, ?, ?)');
+    $order->execute([$_SESSION['user_id'], $total, 'Pending', 'Pending']);
     $orderId = $pdo->lastInsertId();
 
     $itemInsert = $pdo->prepare('INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)');

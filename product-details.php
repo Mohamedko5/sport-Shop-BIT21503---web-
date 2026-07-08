@@ -4,7 +4,7 @@ require_once 'includes/header.php';
 require_once 'includes/navbar.php';
 ?>
 
-<main class="container page" data-product-details-page="true">
+<main class="container page" data-product-details-page="true" data-user-role="<?php echo cleanInput($_SESSION['role'] ?? 'guest'); ?>">
     <div id="apiMessage" class="api-message">Loading product details...</div>
     <section class="details-layout" id="productDetails"></section>
     <section class="section-heading">

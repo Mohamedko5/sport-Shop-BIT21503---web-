@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once '../config/database.php';
+require_once '../includes/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
@@ -43,5 +44,30 @@ $sql .= ' ORDER BY products.created_at DESC';
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 
-echo json_encode($stmt->fetchAll());
+$products = $stmt->fetchAll();
+$limitedProducts = [];
+$perCategoryCount = [];
+
+foreach ($products as $product) {
+    if (!productHasPublicImage($product['image'])) {
+        continue;
+    }
+
+    $categoryKey = (int) $product['category_id'];
+    $perCategoryCount[$categoryKey] = $perCategoryCount[$categoryKey] ?? 0;
+
+    if ($perCategoryCount[$categoryKey] >= 7) {
+        continue;
+    }
+
+    $perCategoryCount[$categoryKey]++;
+    $limitedProducts[] = $product;
+}
+
+$products = $limitedProducts;
+foreach ($products as &$product) {
+    $product['image'] = productImage($product['image']);
+}
+
+echo json_encode($products);
 ?>

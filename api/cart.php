@@ -9,6 +9,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+if (!isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Please login as a customer to use the cart.']);
+    exit;
+}
+
+if (!isCustomer()) {
+    $_SESSION['cart'] = [];
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Admins cannot add products to cart or place orders.']);
+    exit;
+}
+
 $action = $_POST['action'] ?? '';
 $productId = filter_input(INPUT_POST, 'product_id', FILTER_VALIDATE_INT);
 $quantity = filter_input(INPUT_POST, 'quantity', FILTER_VALIDATE_INT);
@@ -25,11 +38,16 @@ function cartApiSummary($pdo)
     if (!empty($_SESSION['cart'])) {
         $ids = array_keys($_SESSION['cart']);
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $pdo->prepare("SELECT id, name, price, stock FROM products WHERE id IN ($placeholders)");
+        $stmt = $pdo->prepare("SELECT id, name, price, stock, image FROM products WHERE id IN ($placeholders)");
         $stmt->execute($ids);
         $products = $stmt->fetchAll();
 
         foreach ($products as $product) {
+            if (!productHasPublicImage($product['image'])) {
+                unset($_SESSION['cart'][$product['id']]);
+                continue;
+            }
+
             $qty = (int) $_SESSION['cart'][$product['id']];
             $subtotal = $qty * (float) $product['price'];
             $items[] = [
@@ -53,14 +71,14 @@ if ($action === 'add') {
         exit;
     }
 
-    $stmt = $pdo->prepare('SELECT stock FROM products WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT stock, image FROM products WHERE id = ?');
     $stmt->execute([$productId]);
     $product = $stmt->fetch();
 
     $newQuantity = ($_SESSION['cart'][$productId] ?? 0) + $quantity;
-    if (!$product || $newQuantity > (int) $product['stock']) {
+    if (!$product || !productHasPublicImage($product['image']) || $newQuantity > (int) $product['stock']) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Product is unavailable or quantity is too high.']);
+        echo json_encode(['success' => false, 'message' => 'Product is unavailable because the image is missing or quantity is too high.']);
         exit;
     }
 
@@ -79,13 +97,13 @@ if ($action === 'update') {
     if ($quantity === 0) {
         unset($_SESSION['cart'][$productId]);
     } else {
-        $stmt = $pdo->prepare('SELECT stock FROM products WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT stock, image FROM products WHERE id = ?');
         $stmt->execute([$productId]);
         $product = $stmt->fetch();
 
-        if (!$product || $quantity > (int) $product['stock']) {
+        if (!$product || !productHasPublicImage($product['image']) || $quantity > (int) $product['stock']) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'Product is unavailable or quantity is too high.']);
+            echo json_encode(['success' => false, 'message' => 'Product is unavailable because the image is missing or quantity is too high.']);
             exit;
         }
 
